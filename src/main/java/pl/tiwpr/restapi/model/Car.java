@@ -29,7 +29,7 @@ public class Car {
     private Boolean damaged;
 
     private CarState carState = CarState.FREE;
-    @NotNull
+
     private CarLocation carLocation = CarLocation.POZNAN;
 
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL)
