@@ -12,11 +12,8 @@ import pl.tiwpr.restapi.model.enums.CarState;
 import pl.tiwpr.restapi.repository.CarRepository;
 import pl.tiwpr.restapi.repository.RentedCarRepository;
 
-import java.util.Optional;
-
 @Slf4j
 @RestController
-@RequestMapping("rent")
 public class RentController {
 
     private RentedCarRepository rentedCarRepository;
@@ -27,19 +24,15 @@ public class RentController {
         this.carRepository = carRepository;
     }
 
-    @GetMapping
+    @GetMapping("/rents")
     public ResponseEntity get(Pageable pageable) {
         Page<CarRention> rentedCars = rentedCarRepository.findAll(pageable);
-
-        if (rentedCars.getTotalElements() > 0) {
-            return new ResponseEntity<>(rentedCars, HttpStatus.OK);
-        } else {
-            return new ResponseEntity(HttpStatus.BAD_REQUEST);
-        }
+        return rentedCars.getTotalElements() > 0 ? new ResponseEntity<>(rentedCars, HttpStatus.OK)
+                : new ResponseEntity(HttpStatus.BAD_REQUEST);
     }
 
-    @PostMapping
-    public ResponseEntity post(@RequestBody CarRention carRention) {
+    @PostMapping("/rents")
+    public ResponseEntity post(@RequestBody CarRention carRention, int UniqueId) {
         Car car = this.carRepository
                 .findById(carRention.getCar().getId())
                 .orElseThrow(RuntimeException::new);
@@ -52,10 +45,10 @@ public class RentController {
         return new ResponseEntity(save, HttpStatus.CREATED);
     }
 
-    @PutMapping("{id}")
+    @PutMapping("/rents/{id}")
     public ResponseEntity update(@RequestBody CarRention carRention, @PathVariable Long id) {
-        Optional<CarRention> carOptional = rentedCarRepository.findById(id);
-        if (!carOptional.isPresent()) {
+        CarRention existingRention = rentedCarRepository.findById(id).orElse(null);
+        if (existingRention == null) {
             return new ResponseEntity("Rent for this car not found", HttpStatus.NOT_FOUND);
         }
         carRention.setId(id);
@@ -63,8 +56,8 @@ public class RentController {
         return new ResponseEntity("Resource updated", HttpStatus.NO_CONTENT);
     }
 
-    @DeleteMapping
-    public ResponseEntity delete(Long id) {
+    @DeleteMapping("/rents/{id}")
+    public ResponseEntity delete(@PathVariable(value = "id") Long id) {
         if (rentedCarRepository.findById(id).isPresent()) {
             rentedCarRepository.deleteById(id);
             return new ResponseEntity("Rention deleted", HttpStatus.OK);

@@ -13,7 +13,6 @@ import java.util.Optional;
 
 @RestController
 @Slf4j
-@RequestMapping("car")
 public class CarController {
     private CarRepository carRepository;
 
@@ -21,45 +20,67 @@ public class CarController {
         this.carRepository = carRepository;
     }
 
-    @GetMapping
+    @GetMapping("/cars")
     public ResponseEntity get(Pageable pageable) {
         Page<Car> cars = carRepository.findAll(pageable);
-
-        if (cars.getTotalElements() > 0) {
-            return new ResponseEntity<>(cars, HttpStatus.OK);
-        } else {
-            return new ResponseEntity(HttpStatus.BAD_REQUEST);
-        }
+        return cars.getTotalElements() > 0 ? new ResponseEntity<>(cars, HttpStatus.OK)
+                : new ResponseEntity(HttpStatus.BAD_REQUEST);
     }
 
-    @PostMapping
+    @GetMapping("/cars/{id}")
+    public ResponseEntity get(@PathVariable(value = "id") Long carId) {
+        Car car = carRepository.findById(carId).orElse(null);
+        return car == null ? new ResponseEntity(HttpStatus.BAD_REQUEST) : new ResponseEntity<>(car, HttpStatus.OK);
+    }
+
+    @PostMapping("/cars")
     public ResponseEntity post(@RequestBody Car car) {
-        Optional<Car> existingCar = carRepository.findById(car.getId());
-        if (existingCar.isPresent()) {
+        Car existingCar = carRepository.findById(car.getId()).orElse(null);
+        if (existingCar != null) {
             return new ResponseEntity("Car already exists", HttpStatus.CONFLICT);
         } else {
+
+            int newEntityVersion = countNowEntityVersion(car);
+            car.setEntityVersion(newEntityVersion);
+
             Car savedCar = carRepository.save(car);
             return new ResponseEntity<>(savedCar, HttpStatus.CREATED);
         }
     }
 
-    @PutMapping("{id}")
-    public ResponseEntity update(@RequestBody Car car, @PathVariable Long id) {
-        Optional<Car> carOptional = carRepository.findById(id);
-        if (!carOptional.isPresent()) {
+    private int countNowEntityVersion(Car car) {
+        int newEntityVersion = car.getEntityVersion() + 1;
+        Optional<Car> carByEntityVersion = carRepository.findCarByEntityVersion(newEntityVersion);
+        if (carByEntityVersion.isPresent()) {
+            newEntityVersion = carByEntityVersion.get().getEntityVersion();
+            while (carRepository.findCarByEntityVersion(newEntityVersion + 1).isPresent()) {
+                newEntityVersion++;
+            }
+            newEntityVersion++;
+        }
+        return newEntityVersion;
+    }
+
+    @PutMapping("/cars/{id}")
+    public ResponseEntity update(@RequestBody Car car, @PathVariable(value = "id") Long id) {
+        Car existingCar = carRepository.findById(id).orElse(null);
+        if (existingCar == null) {
             return new ResponseEntity("Car not found", HttpStatus.NOT_FOUND);
         }
+
+        int newEntityVersion = countNowEntityVersion(car);
+        car.setEntityVersion(newEntityVersion);
+
         car.setId(id);
         carRepository.save(car);
         return new ResponseEntity("Resource updated", HttpStatus.NO_CONTENT);
     }
 
-
-    @DeleteMapping
-    public ResponseEntity delete(Long id) {
+    @DeleteMapping("/cars/{id}")
+    public ResponseEntity delete(@PathVariable(value = "id") Long id) {
         if (carRepository.findById(id).isPresent()) {
             carRepository.deleteById(id);
-            return new ResponseEntity("Car deleted", HttpStatus.OK);
+            return new ResponseEntity("Car " + id + " deleted", HttpStatus.OK);
         } else {
             return new ResponseEntity("Car does not exist", HttpStatus.NOT_FOUND);
         }

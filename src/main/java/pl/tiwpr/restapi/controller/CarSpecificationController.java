@@ -9,11 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import pl.tiwpr.restapi.model.CarSpecification;
 import pl.tiwpr.restapi.repository.CarSpecificationRepository;
 
-import java.util.Optional;
-
 @RestController
 @Slf4j
-@RequestMapping("specification")
 public class CarSpecificationController {
     private CarSpecificationRepository carSpecificationRepository;
 
@@ -21,20 +18,23 @@ public class CarSpecificationController {
         this.carSpecificationRepository = carSpecificationRepository;
     }
 
-    @GetMapping
+    @GetMapping("/specifications")
     public ResponseEntity get(Pageable pageable) {
         Page<CarSpecification> carSpecifications = carSpecificationRepository.findAll(pageable);
-        if (carSpecifications.getTotalElements() > 0) {
-            return new ResponseEntity<>(carSpecifications, HttpStatus.OK);
-        } else {
-            return new ResponseEntity(HttpStatus.BAD_REQUEST);
-        }
+        return carSpecifications.getTotalElements() > 0 ? new ResponseEntity<>(carSpecifications, HttpStatus.OK)
+                : new ResponseEntity(HttpStatus.BAD_REQUEST);
     }
 
-    @PostMapping
+    @GetMapping("/specifications/{id}")
+    public ResponseEntity get(@PathVariable(value = "id") Long specId) {
+        CarSpecification specification = carSpecificationRepository.findById(specId).orElse(null);
+        return specification == null ? new ResponseEntity(HttpStatus.BAD_REQUEST) : new ResponseEntity<>(specification, HttpStatus.OK);
+    }
+
+    @PostMapping("/specifications")
     public ResponseEntity post(@RequestBody CarSpecification carSpecification) {
-        Optional<CarSpecification> existingSpecification = carSpecificationRepository.findById(carSpecification.getId());
-        if (existingSpecification.isPresent()) {
+        CarSpecification existingSpecification = carSpecificationRepository.findById(carSpecification.getId()).orElse(null);
+        if (existingSpecification != null) {
             return new ResponseEntity("Specification for this car already exists", HttpStatus.CONFLICT);
         } else {
             CarSpecification savedSpecification = carSpecificationRepository.save(carSpecification);
@@ -42,10 +42,10 @@ public class CarSpecificationController {
         }
     }
 
-    @PutMapping("{id}")
-    public ResponseEntity update(@RequestBody CarSpecification carSpecification, @PathVariable Long id) {
-        Optional<CarSpecification> carSpecificationOptional = carSpecificationRepository.findById(id);
-        if (!carSpecificationOptional.isPresent()) {
+    @PutMapping("/specifications/{id}")
+    public ResponseEntity update(@RequestBody CarSpecification carSpecification, @PathVariable(name = "id") Long id) {
+        CarSpecification existingSpecification = carSpecificationRepository.findById(id).orElse(null);
+        if (existingSpecification == null) {
             return new ResponseEntity("Car specification not found", HttpStatus.NOT_FOUND);
         }
         carSpecification.setId(id);
@@ -54,8 +54,8 @@ public class CarSpecificationController {
     }
 
 
-    @DeleteMapping
-    public ResponseEntity delete(Long id) {
+    @DeleteMapping("/specifications/{id}")
+    public ResponseEntity delete(@PathVariable(name = "id") Long id) {
         if (carSpecificationRepository.findById(id).isPresent()) {
             carSpecificationRepository.deleteById(id);
             return new ResponseEntity("Specification deleted", HttpStatus.OK);

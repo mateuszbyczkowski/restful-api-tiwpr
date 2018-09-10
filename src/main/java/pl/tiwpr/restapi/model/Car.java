@@ -19,6 +19,7 @@ public class Car {
     @Id
     @GeneratedValue
     private Long id;
+
     @NotNull
     private String licenseNumber;
 
@@ -38,6 +39,9 @@ public class Car {
 
     @ManyToOne
     @NotNull
-    @JoinColumn(name = "cars")
+    @JoinColumn(name = "carspecification_id")
     private CarSpecification carSpecification;
+
+    @NotNull
+    private int entityVersion;
 }

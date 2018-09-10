@@ -9,11 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import pl.tiwpr.restapi.model.Customer;
 import pl.tiwpr.restapi.repository.CustomerRepository;
 
-import java.util.Optional;
-
 @RestController
 @Slf4j
-@RequestMapping("customer")
 public class CustomerController {
     private CustomerRepository customerRepository;
 
@@ -21,21 +18,23 @@ public class CustomerController {
         this.customerRepository = customerRepository;
     }
 
-    @GetMapping
+    @GetMapping("/customers")
     public ResponseEntity get(Pageable pageable) {
         Page<Customer> customers = customerRepository.findAll(pageable);
-
-        if (customers.getTotalElements() > 0) {
-            return new ResponseEntity<>(customers, HttpStatus.OK);
-        } else {
-            return new ResponseEntity(HttpStatus.BAD_REQUEST);
-        }
+        return customers.getTotalElements() > 0 ? new ResponseEntity<>(customers, HttpStatus.OK)
+                : new ResponseEntity(HttpStatus.BAD_REQUEST);
     }
 
-    @PostMapping
+    @GetMapping("/customers/{id}")
+    public ResponseEntity get(@PathVariable(value = "id") Long carId) {
+        Customer customer = customerRepository.findById(carId).orElse(null);
+        return customer == null ? new ResponseEntity(HttpStatus.BAD_REQUEST) : new ResponseEntity<>(customer, HttpStatus.OK);
+    }
+
+    @PostMapping("/customers")
     public ResponseEntity post(@RequestBody Customer customer) {
-        Optional<Customer> existingCustomer = customerRepository.findById(customer.getId());
-        if (existingCustomer.isPresent()) {
+        Customer existingCustomer = customerRepository.findById(customer.getId()).orElse(null);
+        if (existingCustomer != null) {
             return new ResponseEntity("Customer already exists", HttpStatus.CONFLICT);
         } else {
             Customer savedCar = customerRepository.save(customer);
@@ -43,10 +42,18 @@ public class CustomerController {
         }
     }
 
-    @PutMapping("{id}")
-    public ResponseEntity update(@RequestBody Customer customer, @PathVariable Long id) {
-        Optional<Customer> customerOptional = customerRepository.findById(id);
-        if (!customerOptional.isPresent()) {
+
+    @PostMapping("/customers/excatly-once")
+    public ResponseEntity postExcatlyOnce(@RequestBody Customer car) {
+        Customer savedCustomer = customerRepository.save(new Customer());
+        return new ResponseEntity<>(savedCustomer.getId(), HttpStatus.CREATED);
+    }
+
+
+    @PutMapping("/customers/{id}")
+    public ResponseEntity update(@RequestBody Customer customer, @PathVariable(name = "id") Long id) {
+        Customer existingCustomer = customerRepository.findById(id).orElse(null);
+        if (existingCustomer == null) {
             return new ResponseEntity("Customer not found", HttpStatus.NOT_FOUND);
         }
         customer.setId(id);
@@ -55,8 +62,8 @@ public class CustomerController {
     }
 
 
-    @DeleteMapping
-    public ResponseEntity delete(Long id) {
+    @DeleteMapping("/customers/{id}")
+    public ResponseEntity delete(@PathVariable(name = "id") Long id) {
         if (customerRepository.findById(id).isPresent()) {
             customerRepository.deleteById(id);
             return new ResponseEntity("Customer deleted", HttpStatus.OK);
