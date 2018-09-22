@@ -33,6 +33,14 @@ public class CarController {
         return car == null ? new ResponseEntity(HttpStatus.BAD_REQUEST) : new ResponseEntity<>(car, HttpStatus.OK);
     }
 
+    @GetMapping("/cars/{id}/specification")
+    public ResponseEntity getCarSpec(@PathVariable(value = "id") Long carId) {
+        Car car = carRepository.findById(carId).orElse(null);
+        return car == null || car.getCarSpecification() == null
+                ? new ResponseEntity(HttpStatus.BAD_REQUEST)
+                : new ResponseEntity<>(car.getCarSpecification(), HttpStatus.OK);
+    }
+
     @PostMapping("/cars")
     public ResponseEntity post(@RequestBody Car car) {
         Car existingCar = carRepository.findById(car.getId()).orElse(null);
