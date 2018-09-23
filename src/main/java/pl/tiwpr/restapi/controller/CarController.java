@@ -93,4 +93,23 @@ public class CarController {
             return new ResponseEntity("Car does not exist", HttpStatus.NOT_FOUND);
         }
     }
+
+    @DeleteMapping("/cars/")
+    public ResponseEntity delete() {
+        carRepository.deleteAll();
+        return new ResponseEntity("All cars deleted", HttpStatus.OK);
+    }
+
+    @DeleteMapping("/cars/{make}")
+    public ResponseEntity delete(@PathVariable(value = "make") String make) {
+        Iterable<Car> all = carRepository.findAll();
+        all.forEach(car -> {
+            if (car.getCarSpecification() != null) {
+                if (car.getCarSpecification().getMake().equals(make)) {
+                    carRepository.deleteById(car.getId());
+                }
+            }
+        });
+        return new ResponseEntity("All " + make + " cars deleted.", HttpStatus.OK);
+    }
 }
